@@ -19,10 +19,121 @@ import {
   Building2,
   CheckCircle2,
   GraduationCap,
+  AlertTriangle,
+  ShieldCheck,
+  Cpu,
+  Heart,
+  ArrowRight,
+  ChevronDown,
 } from 'lucide-react'
 
 const LS_ACADEMIES_KEY = 'sb_academies'
 const LS_CANDIDATES_KEY = 'sb_candidates'
+const LS_RISK_KEY = 'sb_risk_profile'
+
+interface RiskProfile {
+  riskPct: number
+  vulnerableTasks: string[]
+  transferableSkills: string[]
+  pivotCourse: string
+  pivotCompany: string
+  pivotReducedRisk: number
+  pivotAcademyId: number
+}
+
+const RISK_DATA: Record<string, { label: string } & RiskProfile> = {
+  'data-entry': {
+    label: 'Data Entry Clerk',
+    riskPct: 88,
+    vulnerableTasks: ['Transcribing documents', 'Sorting & filing records', 'Copy-pasting between systems', 'Basic data validation'],
+    transferableSkills: ['Attention to detail', 'Process discipline', 'Stakeholder communication'],
+    pivotCourse: 'Financial Records Management',
+    pivotCompany: 'Cruz & Associates',
+    pivotReducedRisk: 31,
+    pivotAcademyId: 3,
+  },
+  'front-desk': {
+    label: 'Front Desk Receptionist',
+    riskPct: 72,
+    vulnerableTasks: ['Answering standard FAQs', 'Booking & scheduling', 'Routing calls', 'Sending templated emails'],
+    transferableSkills: ['Empathy & warmth', 'Conflict de-escalation', 'Reading social cues', 'Team coordination'],
+    pivotCourse: 'Customer Service Excellence',
+    pivotCompany: 'Verdi Retail Co.',
+    pivotReducedRisk: 15,
+    pivotAcademyId: 2,
+  },
+  'warehouse': {
+    label: 'Warehouse Operator',
+    riskPct: 54,
+    vulnerableTasks: ['Inventory counting', 'Label scanning & printing', 'Simple picking routes'],
+    transferableSkills: ['Physical dexterity', 'Equipment operation', 'Safety judgment', 'Team leadership on floor'],
+    pivotCourse: 'Warehouse Operations & SAP',
+    pivotCompany: 'LogiCorp Solutions',
+    pivotReducedRisk: 18,
+    pivotAcademyId: 1,
+  },
+  'social-media': {
+    label: 'Social Media Coordinator',
+    riskPct: 61,
+    vulnerableTasks: ['Scheduling posts', 'Captioning images with AI tools', 'Reporting analytics', 'A/B testing copy'],
+    transferableSkills: ['Brand storytelling', 'Community empathy', 'Creative direction', 'Crisis communication'],
+    pivotCourse: 'Customer Service Excellence',
+    pivotCompany: 'Verdi Retail Co.',
+    pivotReducedRisk: 22,
+    pivotAcademyId: 2,
+  },
+}
+
+function RiskGauge({ pct }: { pct: number }) {
+  const r = 52
+  const cx = 64
+  const cy = 64
+  const startAngle = -210
+  const sweepAngle = 240
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const arc = (angle: number) => {
+    const rad = toRad(angle)
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+  }
+  const start = arc(startAngle)
+  const trackEnd = arc(startAngle + sweepAngle)
+  const fillEnd = arc(startAngle + sweepAngle * (pct / 100))
+  const largeArc = sweepAngle * (pct / 100) > 180 ? 1 : 0
+  const trackLarge = sweepAngle > 180 ? 1 : 0
+
+  const color = pct >= 75 ? '#f87171' : pct >= 50 ? '#fbbf24' : '#34d399'
+  const bgColor = pct >= 75 ? '#fee2e2' : pct >= 50 ? '#fef9c3' : '#d1fae5'
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 128, height: 100 }}>
+      <svg width="128" height="100" viewBox="0 0 128 100" aria-hidden="true">
+        {/* Track */}
+        <path
+          d={`M ${start.x} ${start.y} A ${r} ${r} 0 ${trackLarge} 1 ${trackEnd.x} ${trackEnd.y}`}
+          fill="none"
+          stroke="#e8e2da"
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
+        {/* Fill */}
+        {pct > 0 && (
+          <path
+            d={`M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${fillEnd.x} ${fillEnd.y}`}
+            fill="none"
+            stroke={color}
+            strokeWidth="10"
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 0.6s ease' }}
+          />
+        )}
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center" style={{ bottom: 6 }}>
+        <span className="text-2xl font-bold leading-none" style={{ color }}>{pct}%</span>
+        <span className="text-[9px] font-semibold uppercase tracking-widest text-[#7a6e65] mt-0.5">AI Risk</span>
+      </div>
+    </div>
+  )
+}
 
 interface QuizQuestion {
   q: string
@@ -131,10 +242,29 @@ export default function WorkerDashboard({ onLogout }: { onLogout: () => void }) 
   const [certified, setCertified] = useState<{ id: number; title: string; score: number; company: string }[]>([])
   const [extraAcademies, setExtraAcademies] = useState<Academy[]>([])
 
+  // AI Risk Index state
+  const [selectedJob, setSelectedJob] = useState<string>('')
+  const [riskExpanded, setRiskExpanded] = useState(true)
+
   const [activeAcademy, setActiveAcademy] = useState<Academy | null>(null)
   const [phase, setPhase] = useState<ExamPhase>('reading')
   const [moduleIndex, setModuleIndex] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>([])
+
+  // Load persisted risk job selection
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_RISK_KEY)
+      if (saved) setSelectedJob(saved)
+    } catch {}
+  }, [])
+
+  // Save risk job selection on change
+  useEffect(() => {
+    if (selectedJob) {
+      try { localStorage.setItem(LS_RISK_KEY, selectedJob) } catch {}
+    }
+  }, [selectedJob])
 
   // Load company-generated academies from localStorage
   useEffect(() => {
@@ -302,6 +432,143 @@ export default function WorkerDashboard({ onLogout }: { onLogout: () => void }) 
               </div>
             </div>
           </div>
+
+          {/* AI Automation Risk Index */}
+          {(() => {
+            const profile = selectedJob ? RISK_DATA[selectedJob] : null
+            const riskColor = profile
+              ? profile.riskPct >= 75 ? '#ef4444' : profile.riskPct >= 50 ? '#f59e0b' : '#10b981'
+              : '#a7c7e7'
+            const riskBg = profile
+              ? profile.riskPct >= 75 ? '#fef2f2' : profile.riskPct >= 50 ? '#fffbeb' : '#f0fdf4'
+              : '#f0f7ff'
+
+            return (
+              <div className="bg-white rounded-3xl border border-[#e8e2da] shadow-sm mb-8 overflow-hidden">
+                {/* Card header — always visible */}
+                <button
+                  onClick={() => setRiskExpanded((v) => !v)}
+                  className="w-full flex items-center gap-3 px-6 py-4 hover:bg-[#faf8f5] transition-colors text-left"
+                  aria-expanded={riskExpanded}
+                >
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: riskBg }}>
+                    <Cpu className="w-5 h-5" style={{ color: riskColor }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#2c3e5a] text-sm">AI Automation Risk Index</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest rounded-full px-2 py-0.5 bg-[#e8f3fb] text-[#4a7ab5]">Indice di Sostituibilità AI</span>
+                    </div>
+                    <p className="text-xs text-[#7a6e65] mt-0.5">
+                      {profile ? `${profile.label} — ${profile.riskPct}% risk` : 'Select your job role to assess your AI replacement risk'}
+                    </p>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-[#7a6e65] flex-shrink-0 transition-transform ${riskExpanded ? 'rotate-180' : ''}`} />
+                </button>
+
+                {riskExpanded && (
+                  <div className="px-6 pb-6 border-t border-[#f0ebe3]">
+                    {/* Job selector */}
+                    <div className="flex items-center gap-3 pt-5 mb-5">
+                      <label htmlFor="job-select" className="text-xs font-semibold text-[#2c3e5a] whitespace-nowrap">Your current role:</label>
+                      <div className="relative flex-1 max-w-xs">
+                        <select
+                          id="job-select"
+                          value={selectedJob}
+                          onChange={(e) => setSelectedJob(e.target.value)}
+                          className="w-full appearance-none bg-[#faf8f5] border border-[#e8e2da] rounded-2xl pl-4 pr-9 py-2.5 text-sm text-[#2c3e5a] focus:outline-none focus:border-[#a7c7e7] focus:ring-2 focus:ring-[#a7c7e7]/20 transition-all cursor-pointer"
+                        >
+                          <option value="">-- Select a role --</option>
+                          {Object.entries(RISK_DATA).map(([key, val]) => (
+                            <option key={key} value={key}>{val.label}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#7a6e65] pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {!profile && (
+                      <div className="rounded-2xl bg-[#f5f0e8] border border-[#e8e2da] px-5 py-6 flex flex-col items-center gap-2 text-center">
+                        <AlertTriangle className="w-6 h-6 text-[#b8b0a8]" />
+                        <p className="text-sm text-[#7a6e65]">Choose your role above to see your personalised AI risk assessment.</p>
+                      </div>
+                    )}
+
+                    {profile && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {/* Gauge column */}
+                        <div className="flex flex-col items-center justify-center rounded-2xl py-5 px-4" style={{ background: riskBg }}>
+                          <RiskGauge pct={profile.riskPct} />
+                          <p className="text-[11px] font-semibold text-center mt-2" style={{ color: riskColor }}>
+                            {profile.riskPct >= 75 ? 'High Risk — Act now' : profile.riskPct >= 50 ? 'Moderate Risk — Upskill soon' : 'Lower Risk — Stay current'}
+                          </p>
+                        </div>
+
+                        {/* Tasks breakdown column */}
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <AlertTriangle className="w-3.5 h-3.5 text-[#f59e0b]" />
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6b5b4e]">Vulnerable Tasks</span>
+                            </div>
+                            <ul className="space-y-1.5">
+                              {profile.vulnerableTasks.map((t) => (
+                                <li key={t} className="flex items-start gap-1.5 text-xs text-[#6b5b4e]">
+                                  <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#fbbf24] flex-shrink-0" />
+                                  {t}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <Heart className="w-3.5 h-3.5 text-[#10b981]" />
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6b5b4e]">Human Strengths</span>
+                            </div>
+                            <ul className="space-y-1.5">
+                              {profile.transferableSkills.map((s) => (
+                                <li key={s} className="flex items-start gap-1.5 text-xs text-[#6b5b4e]">
+                                  <span className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#34d399] flex-shrink-0" />
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        {/* Pivot recommendation column */}
+                        <div className="rounded-2xl bg-[#e8f3fb] border border-[#a7c7e7]/40 p-5 flex flex-col justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <ShieldCheck className="w-4 h-4 text-[#4a7ab5]" />
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-[#4a7ab5]">SkillBridge Recommendation</span>
+                            </div>
+                            <p className="text-xs text-[#2c3e5a] leading-relaxed">
+                              Study{' '}
+                              <span className="font-bold">&ldquo;{profile.pivotCourse}&rdquo;</span>{' '}
+                              by {profile.pivotCompany} to pivot your role and lower your AI risk from{' '}
+                              <span className="font-bold" style={{ color: riskColor }}>{profile.riskPct}%</span>{' '}
+                              to{' '}
+                              <span className="font-bold text-[#10b981]">{profile.pivotReducedRisk}%</span>.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const target = [...BASE_ACADEMIES].find((a) => a.id === profile.pivotAcademyId)
+                              if (target) startLearning(target)
+                            }}
+                            className="inline-flex items-center justify-center gap-2 bg-[#2c3e5a] text-[#faf8f5] rounded-2xl px-4 py-2.5 text-xs font-bold hover:bg-[#3d5270] transition-colors w-full"
+                          >
+                            Start Course <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
