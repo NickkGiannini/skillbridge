@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   BookOpen,
   BadgeCheck,
   TrendingUp,
   LogOut,
   Bell,
-  GraduationCap,
   Target,
   Plus,
   X,
@@ -19,16 +18,25 @@ import {
   RotateCcw,
   Building2,
   CheckCircle2,
+  GraduationCap,
 } from 'lucide-react'
 
-interface WorkerDashboardProps {
-  onLogout: () => void
-}
+const LS_ACADEMIES_KEY = 'sb_academies'
+const LS_CANDIDATES_KEY = 'sb_candidates'
 
 interface QuizQuestion {
   q: string
   options: string[]
   answer: number
+}
+
+interface StoredAcademy {
+  id: number
+  title: string
+  modules: string[]
+  quiz: QuizQuestion[]
+  enrolled: number
+  status: string
 }
 
 interface Academy {
@@ -41,7 +49,7 @@ interface Academy {
   quiz: QuizQuestion[]
 }
 
-const ACADEMIES: Academy[] = [
+const BASE_ACADEMIES: Academy[] = [
   {
     id: 1,
     title: 'Warehouse Operations & SAP',
@@ -49,21 +57,9 @@ const ACADEMIES: Academy[] = [
     skills: ['inventory', 'sap', 'forklift', 'logistics', 'safety'],
     color: '#a7c7e7',
     modules: [
-      {
-        title: 'Forklift Safety Fundamentals',
-        content:
-          'Before operating any forklift, perform a full pre-operation inspection: check tires, forks, hydraulics, and always fasten your seatbelt. Never exceed the rated load capacity and keep a clear line of sight while driving.',
-      },
-      {
-        title: 'Inventory Control in SAP',
-        content:
-          'SAP Materials Management (SAP MM) tracks stock levels in real time. Learn to post goods receipts, run cycle counts, and reconcile physical stock against system records to keep inventory accurate.',
-      },
-      {
-        title: 'Warehouse Workflow Standards',
-        content:
-          'Efficient warehouses follow standardized picking, packing, and shipping routes. Understanding zone-based workflows minimizes travel time and reduces fulfillment errors.',
-      },
+      { title: 'Forklift Safety Fundamentals', content: 'Before operating any forklift, perform a full pre-operation inspection: check tires, forks, hydraulics, and always fasten your seatbelt. Never exceed the rated load capacity and keep a clear line of sight while driving.' },
+      { title: 'Inventory Control in SAP', content: 'SAP Materials Management (SAP MM) tracks stock levels in real time. Learn to post goods receipts, run cycle counts, and reconcile physical stock against system records to keep inventory accurate.' },
+      { title: 'Warehouse Workflow Standards', content: 'Efficient warehouses follow standardized picking, packing, and shipping routes. Understanding zone-based workflows minimizes travel time and reduces fulfillment errors.' },
     ],
     quiz: [
       { q: 'What must you do before operating a forklift?', options: ['Skip the seatbelt', 'Pre-operation inspection', 'Overload the forks'], answer: 1 },
@@ -78,21 +74,9 @@ const ACADEMIES: Academy[] = [
     skills: ['communication', 'crm', 'empathy', 'sales', 'support'],
     color: '#c1e1c1',
     modules: [
-      {
-        title: 'Active Listening',
-        content:
-          'Great service starts with listening. Let customers finish, reflect their concern back to them, and confirm understanding before offering a solution.',
-      },
-      {
-        title: 'Handling Complaints',
-        content:
-          'Stay calm and empathize. Acknowledge the issue, apologize sincerely, and focus on a resolution rather than assigning blame.',
-      },
-      {
-        title: 'CRM Basics',
-        content:
-          'A CRM system stores every customer interaction. Logging notes accurately helps the whole team deliver consistent, personalized support.',
-      },
+      { title: 'Active Listening', content: 'Great service starts with listening. Let customers finish, reflect their concern back to them, and confirm understanding before offering a solution.' },
+      { title: 'Handling Complaints', content: 'Stay calm and empathize. Acknowledge the issue, apologize sincerely, and focus on a resolution rather than assigning blame.' },
+      { title: 'CRM Basics', content: 'A CRM system stores every customer interaction. Logging notes accurately helps the whole team deliver consistent, personalized support.' },
     ],
     quiz: [
       { q: 'The best way to handle an upset customer is to:', options: ['Interrupt them', 'Listen and empathize', 'Hang up'], answer: 1 },
@@ -107,21 +91,9 @@ const ACADEMIES: Academy[] = [
     skills: ['accounting', 'excel', 'bookkeeping', 'finance', 'reporting'],
     color: '#ffb7b2',
     modules: [
-      {
-        title: 'Bookkeeping Foundations',
-        content:
-          'Every transaction affects at least two accounts. Master debits and credits to keep the accounting equation balanced.',
-      },
-      {
-        title: 'Spreadsheets for Finance',
-        content:
-          'Use formulas like SUM, VLOOKUP, and pivot tables to organize and analyze financial data quickly and accurately.',
-      },
-      {
-        title: 'Monthly Reporting',
-        content:
-          'Reconcile accounts and prepare income statements each month to give management a clear picture of financial health.',
-      },
+      { title: 'Bookkeeping Foundations', content: 'Every transaction affects at least two accounts. Master debits and credits to keep the accounting equation balanced.' },
+      { title: 'Spreadsheets for Finance', content: 'Use formulas like SUM, VLOOKUP, and pivot tables to organize and analyze financial data quickly and accurately.' },
+      { title: 'Monthly Reporting', content: 'Reconcile accounts and prepare income statements each month to give management a clear picture of financial health.' },
     ],
     quiz: [
       { q: 'Every transaction affects at least how many accounts?', options: ['One', 'Two', 'Zero'], answer: 1 },
@@ -134,38 +106,72 @@ const ACADEMIES: Academy[] = [
 const SUGGESTED_SKILLS = ['inventory', 'sap', 'communication', 'excel', 'safety', 'crm']
 
 type ExamPhase = 'reading' | 'exam' | 'result'
+type SidebarTab = 'recommended' | 'skills' | 'certificates' | 'interviews'
 
-export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
+function storedAcademyToAcademy(s: StoredAcademy, index: number): Academy {
+  const colors = ['#ffd5c8', '#e8c9f0', '#d4edda']
+  return {
+    id: s.id,
+    title: s.title,
+    company: 'New Partner MSME',
+    skills: ['general', 'operations', 'quality'],
+    color: colors[index % colors.length],
+    modules: s.modules.map((m) => ({
+      title: m,
+      content: `This module covers key concepts related to "${m}". Study carefully to prepare for the certification exam.`,
+    })),
+    quiz: s.quiz,
+  }
+}
+
+export default function WorkerDashboard({ onLogout }: { onLogout: () => void }) {
+  const [tab, setTab] = useState<SidebarTab>('recommended')
   const [skills, setSkills] = useState<string[]>(['inventory', 'safety', 'communication'])
   const [skillInput, setSkillInput] = useState('')
-  const [certified, setCertified] = useState<number[]>([])
+  const [certified, setCertified] = useState<{ id: number; title: string; score: number; company: string }[]>([])
+  const [extraAcademies, setExtraAcademies] = useState<Academy[]>([])
 
-  // Learning flow state
   const [activeAcademy, setActiveAcademy] = useState<Academy | null>(null)
   const [phase, setPhase] = useState<ExamPhase>('reading')
   const [moduleIndex, setModuleIndex] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>([])
 
+  // Load company-generated academies from localStorage
+  useEffect(() => {
+    const load = () => {
+      try {
+        const stored = localStorage.getItem(LS_ACADEMIES_KEY)
+        if (stored) {
+          const parsed: StoredAcademy[] = JSON.parse(stored)
+          // Only include academies not in BASE_ACADEMIES (id > 2)
+          const extras = parsed.filter((a) => a.id > 2 && a.status === 'Live')
+          setExtraAcademies(extras.map((a, i) => storedAcademyToAcademy(a, i)))
+        }
+      } catch {}
+    }
+    load()
+    const interval = setInterval(load, 1500)
+    return () => clearInterval(interval)
+  }, [])
+
+  const allAcademies = useMemo(() => [...BASE_ACADEMIES, ...extraAcademies], [extraAcademies])
+
   const addSkill = (raw: string) => {
     const skill = raw.trim().toLowerCase()
-    if (skill && !skills.includes(skill)) {
-      setSkills((prev) => [...prev, skill])
-    }
+    if (skill && !skills.includes(skill)) setSkills((prev) => [...prev, skill])
     setSkillInput('')
   }
 
   const removeSkill = (skill: string) => setSkills((prev) => prev.filter((s) => s !== skill))
 
   const rankedAcademies = useMemo(() => {
-    return ACADEMIES.map((a) => {
+    return allAcademies.map((a) => {
       const matched = a.skills.filter((s) => skills.includes(s)).length
-      const base = a.skills.length
-      const raw = base === 0 ? 0 : (matched / base) * 100
-      // Give a friendly floor so nothing looks impossible, cap at 98
+      const raw = a.skills.length === 0 ? 0 : (matched / a.skills.length) * 100
       const match = Math.min(98, Math.round(35 + raw * 0.63))
       return { ...a, match }
     }).sort((x, y) => y.match - x.match)
-  }, [skills])
+  }, [skills, allAcademies])
 
   const startLearning = (academy: Academy) => {
     setActiveAcademy(academy)
@@ -178,10 +184,7 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
 
   const score = useMemo(() => {
     if (!activeAcademy) return 0
-    const correct = activeAcademy.quiz.reduce(
-      (acc, question, i) => acc + (answers[i] === question.answer ? 1 : 0),
-      0,
-    )
+    const correct = activeAcademy.quiz.reduce((acc, q, i) => acc + (answers[i] === q.answer ? 1 : 0), 0)
     return Math.round((correct / activeAcademy.quiz.length) * 100)
   }, [activeAcademy, answers])
 
@@ -189,8 +192,28 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
 
   const submitExam = () => {
     setPhase('result')
-    if (activeAcademy && score >= 70 && !certified.includes(activeAcademy.id)) {
-      setCertified((prev) => [...prev, activeAcademy.id])
+    if (activeAcademy && score >= 70 && !certified.find((c) => c.id === activeAcademy.id)) {
+      const newCert = { id: activeAcademy.id, title: activeAcademy.title, score, company: activeAcademy.company }
+      setCertified((prev) => [...prev, newCert])
+
+      // Write result to localStorage so Company Dashboard sees it
+      try {
+        const stored = localStorage.getItem(LS_CANDIDATES_KEY)
+        const existing = stored ? JSON.parse(stored) : []
+        const newCandidate = {
+          name: 'Maria Santos',
+          course: activeAcademy.title.split('&')[0].trim(),
+          score,
+          status: 'Certified - Interview Unlocked',
+          avatar: 'M',
+          color: '#a7c7e7',
+        }
+        // Replace existing entry for this worker+course or append
+        const idx = existing.findIndex((c: { name: string; course: string }) => c.name === 'Maria Santos' && c.course === newCandidate.course)
+        if (idx >= 0) existing[idx] = newCandidate
+        else existing.push(newCandidate)
+        localStorage.setItem(LS_CANDIDATES_KEY, JSON.stringify(existing))
+      } catch {}
     }
   }
 
@@ -201,34 +224,50 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
     { label: 'Interviews', value: String(certified.length), icon: TrendingUp, color: '#ffd5c8', bg: '#fff5f0' },
   ]
 
+  const sidebarItems: { id: SidebarTab; label: string; icon: typeof GraduationCap }[] = [
+    { id: 'recommended', label: 'Recommended', icon: Sparkles },
+    { id: 'skills', label: 'My Skills', icon: Target },
+    { id: 'certificates', label: 'Certificates', icon: BadgeCheck },
+    { id: 'interviews', label: 'Interviews', icon: TrendingUp },
+  ]
+
   return (
     <div className="min-h-screen" style={{ background: '#faf8f5' }}>
       <div className="flex min-h-screen">
         {/* Sidebar */}
         <aside className="hidden lg:flex flex-col w-64 bg-[#2c3e5a] p-6 gap-2 flex-shrink-0">
           <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-2xl bg-[#a7c7e7] flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-[#2c3e5a]" />
+            <img
+              src="/logo-skillbridge.jpeg"
+              alt="SkillBridge"
+              height={36}
+              width={36}
+              className="rounded-xl object-contain flex-shrink-0"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+            <div className="flex flex-col leading-none">
+              <span className="text-sm font-bold text-[#faf8f5]">Skill<span className="text-[#a7c7e7]">Bridge</span></span>
+              <span className="text-[9px] text-[#a7c7e7]/70 font-semibold uppercase tracking-widest">Worker Portal</span>
             </div>
-            <span className="text-base font-bold text-[#faf8f5]">ICSB Academy</span>
           </div>
 
-          {[
-            { label: 'Recommended', icon: Sparkles, active: true },
-            { label: 'My Skills', icon: Target, active: false },
-            { label: 'Certificates', icon: BadgeCheck, active: false },
-            { label: 'Interviews', icon: TrendingUp, active: false },
-          ].map((item) => (
+          {sidebarItems.map((item) => (
             <button
-              key={item.label}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all ${
-                item.active
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all text-left ${
+                tab === item.id
                   ? 'bg-[#a7c7e7]/20 text-[#a7c7e7]'
                   : 'text-[#faf8f5]/60 hover:bg-white/5 hover:text-[#faf8f5]'
               }`}
             >
-              <item.icon className="w-4 h-4" />
+              <item.icon className="w-4 h-4 flex-shrink-0" />
               {item.label}
+              {item.id === 'certificates' && certified.length > 0 && (
+                <span className="ml-auto text-[10px] font-bold bg-[#c1e1c1] text-[#2c3e5a] rounded-full w-5 h-5 flex items-center justify-center">
+                  {certified.length}
+                </span>
+              )}
             </button>
           ))}
 
@@ -239,10 +278,7 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
                 Study every module at no cost. Pay only to unlock your certified exam.
               </p>
             </div>
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-2 text-sm text-[#faf8f5]/50 hover:text-[#ffb7b2] transition-colors px-4 py-2"
-            >
+            <button onClick={onLogout} className="flex items-center gap-2 text-sm text-[#faf8f5]/50 hover:text-[#ffb7b2] transition-colors px-4 py-2">
               <LogOut className="w-4 h-4" />
               Sign Out
             </button>
@@ -251,7 +287,6 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
 
         {/* Main content */}
         <main className="flex-1 p-6 md:p-10 overflow-auto">
-          {/* Top bar */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-sm text-[#7a6e65] font-medium">Good morning,</p>
@@ -268,7 +303,7 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
             </div>
           </div>
 
-          {/* Stats grid */}
+          {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {statCards.map((stat, i) => (
               <div key={i} className="bg-white rounded-3xl p-5 border border-[#e8e2da] shadow-sm hover:shadow-md transition-shadow">
@@ -281,148 +316,181 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
             ))}
           </div>
 
-          {/* My Skills */}
-          <div className="bg-white rounded-3xl border border-[#e8e2da] shadow-sm p-6 md:p-8 mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-11 h-11 rounded-2xl bg-[#a7c7e7]/20 flex items-center justify-center">
-                <Target className="w-5 h-5 text-[#4a7ab5]" />
+          {/* ── TAB: Recommended ── */}
+          {tab === 'recommended' && (
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <Sparkles className="w-5 h-5 text-[#ffb7b2]" />
+                <h2 className="text-lg font-bold text-[#2c3e5a]">Recommended Academies</h2>
+                <span className="text-xs text-[#7a6e65]">matched to your skills</span>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-[#2c3e5a]">My Skills</h2>
-                <p className="text-sm text-[#7a6e65]">Add your skills — AI matches you to the right academies.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {rankedAcademies.map((academy) => {
+                  const isCertified = !!certified.find((c) => c.id === academy.id)
+                  return (
+                    <div key={academy.id} className="bg-white rounded-3xl p-6 border border-[#e8e2da] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: academy.color + '30' }}>
+                          <BookOpen className="w-5 h-5" style={{ color: academy.color }} />
+                        </div>
+                        <div className="text-xs font-bold rounded-full px-2.5 py-1" style={{ background: academy.match >= 70 ? '#eaf6ea' : '#f5f0e8', color: academy.match >= 70 ? '#3a6b3a' : '#6b5b4e' }}>
+                          {academy.match}% Match
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-[#2c3e5a] text-sm mb-1">{academy.title}</h3>
+                      <p className="text-xs text-[#7a6e65] flex items-center gap-1 mb-4">
+                        <Building2 className="w-3 h-3" /> {academy.company}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mb-5">
+                        {academy.skills.slice(0, 3).map((s) => (
+                          <span key={s} className={`text-[10px] capitalize rounded-full px-2 py-0.5 ${skills.includes(s) ? 'bg-[#e8f3fb] text-[#4a7ab5] font-semibold' : 'bg-[#f5f0e8] text-[#9a8e83]'}`}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => startLearning(academy)}
+                        className="mt-auto w-full inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all"
+                        style={isCertified ? { background: '#eaf6ea', color: '#3a6b3a' } : { background: academy.color, color: '#2c3e5a' }}
+                      >
+                        {isCertified ? <><BadgeCheck className="w-4 h-4" /> Certified</> : <>Start Learning <ChevronRight className="w-4 h-4" /></>}
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             </div>
+          )}
 
-            <div className="flex flex-wrap gap-2 mb-4">
-              {skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="inline-flex items-center gap-1.5 bg-[#e8f3fb] text-[#2c3e5a] rounded-full pl-3 pr-2 py-1.5 text-xs font-semibold capitalize"
-                >
-                  {skill}
-                  <button
-                    onClick={() => removeSkill(skill)}
-                    className="w-4 h-4 rounded-full bg-[#a7c7e7]/40 hover:bg-[#a7c7e7] flex items-center justify-center transition-colors"
-                    aria-label={`Remove ${skill}`}
-                  >
-                    <X className="w-2.5 h-2.5" />
+          {/* ── TAB: My Skills ── */}
+          {tab === 'skills' && (
+            <div className="bg-white rounded-3xl border border-[#e8e2da] shadow-sm p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-11 h-11 rounded-2xl bg-[#a7c7e7]/20 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-[#4a7ab5]" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#2c3e5a]">My Skills</h2>
+                  <p className="text-sm text-[#7a6e65]">Add your skills — AI matches you to the right academies.</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {skills.map((skill) => (
+                  <span key={skill} className="inline-flex items-center gap-1.5 bg-[#e8f3fb] text-[#2c3e5a] rounded-full pl-3 pr-2 py-1.5 text-xs font-semibold capitalize">
+                    {skill}
+                    <button onClick={() => removeSkill(skill)} className="w-4 h-4 rounded-full bg-[#a7c7e7]/40 hover:bg-[#a7c7e7] flex items-center justify-center transition-colors" aria-label={`Remove ${skill}`}>
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+                {skills.length === 0 && <span className="text-xs text-[#b8b0a8] py-1.5">No skills yet — add a few to see matches.</span>}
+              </div>
+              <div className="flex gap-2 mb-3">
+                <input
+                  value={skillInput}
+                  onChange={(e) => setSkillInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                      e.preventDefault()
+                      addSkill(skillInput)
+                    }
+                  }}
+                  placeholder="Type a skill and press Enter..."
+                  className="flex-1 rounded-2xl bg-[#faf8f5] border border-[#e8e2da] px-4 py-2.5 text-sm text-[#2c3e5a] placeholder:text-[#b8b0a8] focus:outline-none focus:border-[#a7c7e7] focus:ring-2 focus:ring-[#a7c7e7]/20 transition-all"
+                />
+                <button onClick={() => addSkill(skillInput)} disabled={!skillInput.trim()} className="inline-flex items-center gap-1.5 bg-[#a7c7e7] text-[#2c3e5a] px-4 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors disabled:opacity-40">
+                  <Plus className="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-[#7a6e65] font-medium">Suggestions:</span>
+                {SUGGESTED_SKILLS.filter((s) => !skills.includes(s)).map((s) => (
+                  <button key={s} onClick={() => addSkill(s)} className="text-[11px] capitalize rounded-full border border-[#e8e2da] bg-[#faf8f5] text-[#6b5b4e] px-2.5 py-1 hover:border-[#a7c7e7] hover:text-[#2c3e5a] transition-colors">
+                    + {s}
                   </button>
-                </span>
-              ))}
-              {skills.length === 0 && (
-                <span className="text-xs text-[#b8b0a8] py-1.5">No skills yet — add a few to see matches.</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: Certificates ── */}
+          {tab === 'certificates' && (
+            <div>
+              <h2 className="text-lg font-bold text-[#2c3e5a] mb-5">My Certificates</h2>
+              {certified.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-[#e8e2da] p-12 text-center">
+                  <div className="w-14 h-14 rounded-3xl bg-[#eaf6ea] flex items-center justify-center mx-auto mb-4">
+                    <BadgeCheck className="w-7 h-7 text-[#c1e1c1]" />
+                  </div>
+                  <h3 className="font-bold text-[#2c3e5a] mb-2">No certificates yet</h3>
+                  <p className="text-sm text-[#7a6e65] max-w-xs mx-auto">Complete a course exam with 70% or higher to earn your first Standardized Competence Badge.</p>
+                  <button onClick={() => setTab('recommended')} className="mt-5 inline-flex items-center gap-2 bg-[#a7c7e7] text-[#2c3e5a] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors">
+                    Browse Academies <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {certified.map((cert, i) => (
+                    <div key={i} className="bg-white rounded-3xl border-2 border-[#c1e1c1] p-6 flex items-center gap-4 shadow-sm">
+                      <div className="w-14 h-14 rounded-3xl bg-[#eaf6ea] flex items-center justify-center flex-shrink-0">
+                        <Award className="w-7 h-7 text-[#3a6b3a]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-[#3a6b3a] mb-0.5">Standardized Competence Badge</div>
+                        <h3 className="font-bold text-[#2c3e5a] text-sm truncate">{cert.title}</h3>
+                        <p className="text-xs text-[#7a6e65]">{cert.company}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-2xl font-bold text-[#3a6b3a]">{cert.score}%</div>
+                        <div className="text-[10px] text-[#7a6e65]">Exam Score</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
+          )}
 
-            <div className="flex gap-2 mb-3">
-              <input
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
-                    e.preventDefault()
-                    addSkill(skillInput)
-                  }
-                }}
-                placeholder="Type a skill and press Enter..."
-                className="flex-1 rounded-2xl bg-[#faf8f5] border border-[#e8e2da] px-4 py-2.5 text-sm text-[#2c3e5a] placeholder:text-[#b8b0a8] focus:outline-none focus:border-[#a7c7e7] focus:ring-2 focus:ring-[#a7c7e7]/20 transition-all"
-              />
-              <button
-                onClick={() => addSkill(skillInput)}
-                disabled={!skillInput.trim()}
-                className="inline-flex items-center gap-1.5 bg-[#a7c7e7] text-[#2c3e5a] px-4 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4" /> Add
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-[#7a6e65] font-medium">Suggestions:</span>
-              {SUGGESTED_SKILLS.filter((s) => !skills.includes(s)).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => addSkill(s)}
-                  className="text-[11px] capitalize rounded-full border border-[#e8e2da] bg-[#faf8f5] text-[#6b5b4e] px-2.5 py-1 hover:border-[#a7c7e7] hover:text-[#2c3e5a] transition-colors"
-                >
-                  + {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Recommended Academies */}
-          <div>
-            <div className="flex items-center gap-2 mb-5">
-              <Sparkles className="w-5 h-5 text-[#ffb7b2]" />
-              <h2 className="text-lg font-bold text-[#2c3e5a]">Recommended Academies</h2>
-              <span className="text-xs text-[#7a6e65]">matched to your skills</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {rankedAcademies.map((academy) => {
-                const isCertified = certified.includes(academy.id)
-                return (
-                  <div
-                    key={academy.id}
-                    className="bg-white rounded-3xl p-6 border border-[#e8e2da] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: academy.color + '30' }}>
-                        <BookOpen className="w-5 h-5" style={{ color: academy.color }} />
-                      </div>
-                      <div
-                        className="text-xs font-bold rounded-full px-2.5 py-1"
-                        style={{
-                          background: academy.match >= 70 ? '#eaf6ea' : '#f5f0e8',
-                          color: academy.match >= 70 ? '#3a6b3a' : '#6b5b4e',
-                        }}
-                      >
-                        {academy.match}% Match
-                      </div>
-                    </div>
-
-                    <h3 className="font-bold text-[#2c3e5a] text-sm mb-1">{academy.title}</h3>
-                    <p className="text-xs text-[#7a6e65] flex items-center gap-1 mb-4">
-                      <Building2 className="w-3 h-3" /> {academy.company}
-                    </p>
-
-                    <div className="flex flex-wrap gap-1.5 mb-5">
-                      {academy.skills.slice(0, 3).map((s) => (
-                        <span
-                          key={s}
-                          className={`text-[10px] capitalize rounded-full px-2 py-0.5 ${
-                            skills.includes(s) ? 'bg-[#e8f3fb] text-[#4a7ab5] font-semibold' : 'bg-[#f5f0e8] text-[#9a8e83]'
-                          }`}
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => startLearning(academy)}
-                      className="mt-auto w-full inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all"
-                      style={
-                        isCertified
-                          ? { background: '#eaf6ea', color: '#3a6b3a' }
-                          : { background: academy.color, color: '#2c3e5a' }
-                      }
-                    >
-                      {isCertified ? (
-                        <>
-                          <BadgeCheck className="w-4 h-4" /> Certified
-                        </>
-                      ) : (
-                        <>
-                          Start Learning <ChevronRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
+          {/* ── TAB: Interviews ── */}
+          {tab === 'interviews' && (
+            <div>
+              <h2 className="text-lg font-bold text-[#2c3e5a] mb-5">Interview Pipeline</h2>
+              {certified.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-[#e8e2da] p-12 text-center">
+                  <div className="w-14 h-14 rounded-3xl bg-[#fff0ef] flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="w-7 h-7 text-[#ffb7b2]" />
                   </div>
-                )
-              })}
+                  <h3 className="font-bold text-[#2c3e5a] mb-2">No interviews unlocked yet</h3>
+                  <p className="text-sm text-[#7a6e65] max-w-xs mx-auto">Pass a certification exam to unlock a direct interview with the company that created the course.</p>
+                  <button onClick={() => setTab('recommended')} className="mt-5 inline-flex items-center gap-2 bg-[#ffb7b2] text-[#2c3e5a] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors">
+                    Start Learning <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {certified.map((cert, i) => (
+                    <div key={i} className="bg-white rounded-3xl border border-[#e8e2da] p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+                      <div className="w-12 h-12 rounded-2xl bg-[#fff0ef] flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-6 h-6 text-[#ffb7b2]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-[#2c3e5a] text-sm truncate">{cert.company}</h3>
+                        <p className="text-xs text-[#7a6e65]">Role: {cert.title}</p>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-3 py-1 bg-[#fff0ef] text-[#c0574f]">
+                          Interview Unlocked
+                        </span>
+                        <button className="bg-[#2c3e5a] text-[#faf8f5] px-4 py-2 rounded-2xl text-xs font-bold hover:bg-[#3d5270] transition-colors">
+                          Schedule
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </main>
       </div>
 
@@ -430,7 +498,6 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
       {activeAcademy && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#2c3e5a]/40 backdrop-blur-sm fade-in">
           <div className="bg-[#faf8f5] rounded-3xl w-full max-w-lg max-h-[88vh] overflow-auto shadow-2xl fade-in-up">
-            {/* Header */}
             <div className="sticky top-0 bg-[#faf8f5] flex items-center justify-between p-6 border-b border-[#e8e2da]">
               <div className="min-w-0">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-[#4a7ab5]">
@@ -438,59 +505,38 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
                 </span>
                 <h3 className="text-lg font-bold text-[#2c3e5a] truncate">{activeAcademy.title}</h3>
               </div>
-              <button
-                onClick={closeLearning}
-                className="w-9 h-9 rounded-2xl bg-white border border-[#e8e2da] flex items-center justify-center text-[#6b5b4e] hover:bg-[#f5f0e8] transition-colors flex-shrink-0"
-                aria-label="Close"
-              >
+              <button onClick={closeLearning} className="w-9 h-9 rounded-2xl bg-white border border-[#e8e2da] flex items-center justify-center text-[#6b5b4e] hover:bg-[#f5f0e8] transition-colors flex-shrink-0" aria-label="Close">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="p-6">
-              {/* READING PHASE */}
+              {/* READING */}
               {phase === 'reading' && (
                 <>
                   <div className="flex items-center gap-1.5 mb-5">
                     {activeAcademy.modules.map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-1.5 flex-1 rounded-full transition-colors"
-                        style={{ background: i <= moduleIndex ? '#a7c7e7' : '#e8e2da' }}
-                      />
+                      <div key={i} className="h-1.5 flex-1 rounded-full transition-colors" style={{ background: i <= moduleIndex ? '#a7c7e7' : '#e8e2da' }} />
                     ))}
                   </div>
-
                   <div className="w-11 h-11 rounded-2xl bg-[#a7c7e7]/20 flex items-center justify-center mb-4">
-                    <span className="font-bold text-[#4a7ab5]">{moduleIndex + 1}</span>
+                    <BookOpen className="w-5 h-5 text-[#4a7ab5]" />
                   </div>
-                  <h4 className="text-lg font-bold text-[#2c3e5a] mb-3">
-                    {activeAcademy.modules[moduleIndex].title}
-                  </h4>
-                  <p className="text-sm text-[#6b5b4e] leading-relaxed mb-6">
-                    {activeAcademy.modules[moduleIndex].content}
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-[#4a7ab5] mb-1">
+                    Module <span className="font-bold text-[#4a7ab5]">{moduleIndex + 1}</span> of {activeAcademy.modules.length}
                   </p>
-
+                  <h4 className="text-lg font-bold text-[#2c3e5a] mb-3">{activeAcademy.modules[moduleIndex].title}</h4>
+                  <p className="text-sm text-[#6b5b4e] leading-relaxed mb-6">{activeAcademy.modules[moduleIndex].content}</p>
                   <div className="flex items-center justify-between gap-3">
-                    <button
-                      onClick={() => setModuleIndex((i) => Math.max(0, i - 1))}
-                      disabled={moduleIndex === 0}
-                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b5b4e] px-4 py-2.5 rounded-2xl hover:bg-[#f0ebe3] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
+                    <button onClick={() => setModuleIndex((i) => Math.max(0, i - 1))} disabled={moduleIndex === 0} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b5b4e] px-4 py-2.5 rounded-2xl hover:bg-[#f0ebe3] transition-colors disabled:opacity-30">
                       <ChevronLeft className="w-4 h-4" /> Back
                     </button>
                     {moduleIndex < activeAcademy.modules.length - 1 ? (
-                      <button
-                        onClick={() => setModuleIndex((i) => i + 1)}
-                        className="inline-flex items-center gap-1.5 bg-[#a7c7e7] text-[#2c3e5a] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors"
-                      >
+                      <button onClick={() => setModuleIndex((i) => i + 1)} className="inline-flex items-center gap-1.5 bg-[#a7c7e7] text-[#2c3e5a] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors">
                         Next Module <ChevronRight className="w-4 h-4" />
                       </button>
                     ) : (
-                      <button
-                        onClick={() => setPhase('exam')}
-                        className="inline-flex items-center gap-1.5 bg-[#ffb7b2] text-[#2c3e5a] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors"
-                      >
+                      <button onClick={() => setPhase('exam')} className="inline-flex items-center gap-1.5 bg-[#ffb7b2] text-[#2c3e5a] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors">
                         Take the Exam <ChevronRight className="w-4 h-4" />
                       </button>
                     )}
@@ -498,54 +544,35 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
                 </>
               )}
 
-              {/* EXAM PHASE */}
+              {/* EXAM */}
               {phase === 'exam' && (
                 <>
-                  <p className="text-sm text-[#7a6e65] mb-5">
-                    Answer all {activeAcademy.quiz.length} questions. Score 70% or higher to earn your certificate.
-                  </p>
+                  <p className="text-sm text-[#7a6e65] mb-5">Answer all {activeAcademy.quiz.length} questions. Score 70% or higher to earn your certificate.</p>
                   <div className="space-y-4 mb-6">
                     {activeAcademy.quiz.map((question, qi) => (
                       <div key={qi} className="bg-white rounded-2xl p-4 border border-[#e8e2da]">
                         <p className="text-sm font-semibold text-[#2c3e5a] mb-3">{qi + 1}. {question.q}</p>
                         <div className="space-y-2">
-                          {question.options.map((opt, oi) => {
-                            const active = answers[qi] === oi
-                            return (
-                              <button
-                                key={oi}
-                                onClick={() =>
-                                  setAnswers((prev) => {
-                                    const next = [...prev]
-                                    next[qi] = oi
-                                    return next
-                                  })
-                                }
-                                className={`w-full text-left text-xs rounded-xl px-3 py-2.5 border transition-all ${
-                                  active
-                                    ? 'bg-[#e8f3fb] border-[#a7c7e7] text-[#2c3e5a] font-semibold'
-                                    : 'bg-[#faf8f5] border-[#e8e2da] text-[#6b5b4e] hover:border-[#a7c7e7]/50'
-                                }`}
-                              >
-                                {opt}
-                              </button>
-                            )
-                          })}
+                          {question.options.map((opt, oi) => (
+                            <button
+                              key={oi}
+                              onClick={() => setAnswers((prev) => { const next = [...prev]; next[qi] = oi; return next })}
+                              className={`w-full text-left text-xs rounded-xl px-3 py-2.5 border transition-all ${answers[qi] === oi ? 'bg-[#e8f3fb] border-[#a7c7e7] text-[#2c3e5a] font-semibold' : 'bg-[#faf8f5] border-[#e8e2da] text-[#6b5b4e] hover:border-[#a7c7e7]/50'}`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={submitExam}
-                    disabled={answers.some((a) => a === null)}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-[#ffb7b2] text-[#2c3e5a] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
+                  <button onClick={submitExam} disabled={answers.some((a) => a === null)} className="w-full inline-flex items-center justify-center gap-2 bg-[#ffb7b2] text-[#2c3e5a] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     Submit Exam
                   </button>
                 </>
               )}
 
-              {/* RESULT PHASE */}
+              {/* RESULT */}
               {phase === 'result' && (
                 <div className="text-center">
                   {passed ? (
@@ -556,33 +583,24 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
                       <h4 className="text-2xl font-bold text-[#2c3e5a] mb-1">Congratulations!</h4>
                       <p className="text-sm text-[#7a6e65] mb-1">You scored</p>
                       <div className="text-4xl font-bold text-[#3a6b3a] mb-5">{score}%</div>
-
-                      {/* Competence Badge */}
                       <div className="bg-white rounded-3xl border-2 border-[#c1e1c1] p-6 text-left mb-5">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-11 h-11 rounded-2xl bg-[#c1e1c1] flex items-center justify-center flex-shrink-0">
                             <Award className="w-6 h-6 text-[#2c3e5a]" />
                           </div>
                           <div>
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#3a6b3a]">
-                              Standardized Competence Badge
-                            </div>
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-[#3a6b3a]">Standardized Competence Badge</div>
                             <div className="font-bold text-[#2c3e5a] text-sm">{activeAcademy.title}</div>
                           </div>
                         </div>
                         <p className="text-xs text-[#6b5b4e] leading-relaxed">
-                          This verified badge is now a portable asset on your profile. It unlocks a priority interview
-                          with <span className="font-semibold">{activeAcademy.company}</span> — and makes you instantly
-                          hireable by other MSMEs with similar needs across the platform.
+                          This verified badge is now a portable asset on your profile. It unlocks a priority interview with{' '}
+                          <span className="font-semibold">{activeAcademy.company}</span> — and makes you instantly hireable by other MSMEs with similar needs across the platform.
                         </p>
                       </div>
-
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <button
-                          onClick={closeLearning}
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-[#2c3e5a] text-[#faf8f5] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#3d5270] transition-colors"
-                        >
-                          <CheckCircle2 className="w-4 h-4" /> Unlock Interview
+                        <button onClick={() => { closeLearning(); setTab('certificates') }} className="flex-1 inline-flex items-center justify-center gap-2 bg-[#2c3e5a] text-[#faf8f5] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#3d5270] transition-colors">
+                          <CheckCircle2 className="w-4 h-4" /> View Certificate
                         </button>
                       </div>
                     </>
@@ -594,24 +612,12 @@ export default function WorkerDashboard({ onLogout }: WorkerDashboardProps) {
                       <h4 className="text-2xl font-bold text-[#2c3e5a] mb-1">Almost there!</h4>
                       <p className="text-sm text-[#7a6e65] mb-1">You scored</p>
                       <div className="text-4xl font-bold text-[#c0574f] mb-2">{score}%</div>
-                      <p className="text-sm text-[#7a6e65] mb-5">
-                        You need 70% to certify. Review the modules and try again — learning is always free.
-                      </p>
+                      <p className="text-sm text-[#7a6e65] mb-5">You need 70% to certify. Review the modules and try again — learning is always free.</p>
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <button
-                          onClick={() => {
-                            setPhase('reading')
-                            setModuleIndex(0)
-                            setAnswers(new Array(activeAcademy.quiz.length).fill(null))
-                          }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-[#a7c7e7] text-[#2c3e5a] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors"
-                        >
+                        <button onClick={() => { setPhase('reading'); setModuleIndex(0); setAnswers(new Array(activeAcademy.quiz.length).fill(null)) }} className="flex-1 inline-flex items-center justify-center gap-2 bg-[#a7c7e7] text-[#2c3e5a] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-colors">
                           <RotateCcw className="w-4 h-4" /> Review &amp; Retry
                         </button>
-                        <button
-                          onClick={closeLearning}
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-[#e8e2da] text-[#6b5b4e] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#f5f0e8] transition-colors"
-                        >
+                        <button onClick={closeLearning} className="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-[#e8e2da] text-[#6b5b4e] px-5 py-3 rounded-2xl text-sm font-bold hover:bg-[#f5f0e8] transition-colors">
                           Close
                         </button>
                       </div>

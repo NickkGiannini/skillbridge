@@ -8,7 +8,9 @@ import HowItWorks from '@/components/how-it-works'
 import AuthModal from '@/components/auth-modal'
 import WorkerDashboard from '@/components/worker-dashboard'
 import CompanyDashboard from '@/components/company-dashboard'
-import { Heart, Shield, Zap, Globe, ArrowRight, GraduationCap, Mail } from 'lucide-react'
+import VisionRoadmap from '@/components/vision-roadmap'
+import OurTeam from '@/components/our-team'
+import { Heart, Shield, Zap, Globe, ArrowRight, GraduationCap, Mail, CheckCircle2 } from 'lucide-react'
 
 type Role = 'worker' | 'company'
 type View = 'landing' | 'worker-dashboard' | 'company-dashboard'
@@ -17,6 +19,8 @@ export default function Home() {
   const [view, setView] = useState<View>('landing')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalRole, setModalRole] = useState<Role | undefined>(undefined)
+  const [subscribed, setSubscribed] = useState(false)
+  const [subEmail, setSubEmail] = useState('')
 
   const openModal = (role?: Role) => {
     setModalRole(role)
@@ -31,6 +35,18 @@ export default function Home() {
   const handleLogout = () => {
     setView('landing')
     setModalRole(undefined)
+  }
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (subEmail.trim()) {
+      setSubscribed(true)
+    }
+  }
+
+  const scrollTo = (id: string) => {
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   if (view === 'worker-dashboard') {
@@ -53,7 +69,7 @@ export default function Home() {
   return (
     <>
       <DemoNav view={view} onChange={setView} />
-      <Navbar onLoginClick={() => openModal()} offsetTop />
+      <Navbar onLoginClick={(role) => openModal(role)} offsetTop />
 
       <main>
         {/* Hero */}
@@ -65,21 +81,21 @@ export default function Home() {
         {/* How It Works */}
         <HowItWorks />
 
-        {/* Why ICSB section */}
+        {/* Why SkillBridge */}
         <section className="py-24 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-white border border-[#e8e2da] rounded-full px-4 py-2 mb-6 shadow-sm">
                 <div className="w-2 h-2 rounded-full bg-[#ffb7b2]" />
                 <span className="text-xs font-semibold text-[#6b5b4e] uppercase tracking-widest">
-                  Why ICSB Academy
+                  Why SkillBridge
                 </span>
               </div>
               <h2 className="text-4xl md:text-5xl font-bold text-[#2c3e5a] mb-4 text-balance">
                 Built for real impact
               </h2>
               <p className="text-lg text-[#7a6e65] max-w-xl mx-auto leading-relaxed text-balance">
-                We believe every worker deserves a fair shot at a great career — and every MSME deserves pre-trained talent.
+                Every worker deserves a fair shot at a great career — and every MSME deserves pre-trained talent.
               </p>
             </div>
 
@@ -105,7 +121,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Small cards */}
               <div className="bg-[#e8f3fb] rounded-3xl p-7 flex gap-5 items-start hover:shadow-md transition-shadow">
                 <div className="w-11 h-11 rounded-2xl bg-[#a7c7e7] flex items-center justify-center flex-shrink-0">
                   <Heart className="w-5 h-5 text-[#2c3e5a]" />
@@ -145,6 +160,9 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Vision & Roadmap */}
+        <VisionRoadmap />
+
         {/* Testimonials */}
         <section className="py-16 px-6 bg-[#f5f0e8]/50">
           <div className="max-w-6xl mx-auto">
@@ -155,7 +173,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {[
                 {
-                  quote: 'I had zero office experience. After 3 weeks on ICSB Academy, I passed the exam and got hired as an Operations Assistant.',
+                  quote: 'I had zero office experience. After 3 weeks on SkillBridge, I passed the exam and got hired as an Operations Assistant.',
                   name: 'Maria Santos',
                   role: 'Operations Assistant, Bright Solutions',
                   color: '#a7c7e7',
@@ -206,6 +224,9 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Meet the Team */}
+        <OurTeam />
+
         {/* Final CTA */}
         <section className="py-24 px-6">
           <div className="max-w-4xl mx-auto">
@@ -228,7 +249,7 @@ export default function Home() {
                   Your future starts with a single course.
                 </h2>
                 <p className="text-[#faf8f5]/70 max-w-xl mx-auto mb-8 leading-relaxed">
-                  Whether you&apos;re a worker seeking a career breakthrough or a company building its dream team — ICSB Academy makes it possible.
+                  Whether you&apos;re a worker seeking a career breakthrough or a company building its dream team — SkillBridge makes it possible.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
@@ -254,41 +275,64 @@ export default function Home() {
       <footer className="bg-[#f5f0e8] border-t border-[#e8e2da] py-12 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-10">
+            {/* Brand */}
             <div className="max-w-xs">
               <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-9 h-9 rounded-2xl bg-[#a7c7e7] flex items-center justify-center">
+                <img
+                  src="/logo-skillbridge.jpeg"
+                  alt="SkillBridge"
+                  height={36}
+                  width={36}
+                  className="rounded-xl object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                    const fb = e.currentTarget.nextElementSibling as HTMLElement | null
+                    if (fb) fb.style.display = 'flex'
+                  }}
+                />
+                <span className="hidden w-9 h-9 rounded-2xl bg-[#a7c7e7] items-center justify-center" aria-hidden="true">
                   <GraduationCap className="w-5 h-5 text-[#2c3e5a]" />
+                </span>
+                <div>
+                  <span className="font-bold text-[#2c3e5a]">Skill<span className="text-[#1a7fc1]">Bridge</span></span>
+                  <p className="text-[10px] text-[#a7c7e7] font-semibold uppercase tracking-widest">ICSB Academy Cup 2026</p>
                 </div>
-                <span className="font-bold text-[#2c3e5a]">ICSB Academy</span>
               </div>
               <p className="text-sm text-[#7a6e65] leading-relaxed">
                 Decentralized AI-powered corporate academy bridging the gap between workers and MSMEs.
               </p>
+              <p className="text-xs text-[#a7c7e7] font-semibold mt-2 italic">
+                &ldquo;Learn what companies need. Prove what you can do.&rdquo;
+              </p>
             </div>
+
+            {/* Links */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
               <div>
                 <h4 className="font-bold text-[#2c3e5a] mb-3">Platform</h4>
-                {['For Workers', 'For Companies', 'How It Works', 'Pricing'].map((l) => (
-                  <a key={l} href="#" className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors">
-                    {l}
-                  </a>
-                ))}
+                <button onClick={() => scrollTo('how-it-works')} className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors text-left">
+                  How It Works
+                </button>
+                <button onClick={() => openModal('worker')} className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors text-left">
+                  For Workers
+                </button>
+                <button onClick={() => openModal('company')} className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors text-left">
+                  For Companies
+                </button>
               </div>
               <div>
-                <h4 className="font-bold text-[#2c3e5a] mb-3">Company</h4>
-                {['About ICSB', 'Blog', 'Careers', 'Press'].map((l) => (
-                  <a key={l} href="#" className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors">
-                    {l}
-                  </a>
-                ))}
+                <h4 className="font-bold text-[#2c3e5a] mb-3">About</h4>
+                <button onClick={() => scrollTo('our-team')} className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors text-left">
+                  Our Team
+                </button>
+                <button onClick={() => scrollTo('vision-roadmap')} className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors text-left">
+                  Roadmap
+                </button>
               </div>
               <div>
                 <h4 className="font-bold text-[#2c3e5a] mb-3">Legal</h4>
-                {['Privacy Policy', 'Terms of Use', 'Cookie Policy'].map((l) => (
-                  <a key={l} href="#" className="block text-[#7a6e65] hover:text-[#2c3e5a] mb-2 transition-colors">
-                    {l}
-                  </a>
-                ))}
+                <span className="block text-[#b8b0a8] mb-2 text-xs cursor-default">Privacy Policy</span>
+                <span className="block text-[#b8b0a8] mb-2 text-xs cursor-default">Terms of Use</span>
               </div>
             </div>
           </div>
@@ -302,20 +346,33 @@ export default function Home() {
                 <div className="text-xs text-[#7a6e65]">Get updates on new courses and hiring opportunities.</div>
               </div>
             </div>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <input
-                type="email"
-                placeholder="Your email"
-                className="flex-1 sm:w-56 px-4 py-2.5 rounded-2xl bg-[#f5f0e8] border border-[#e8e2da] text-sm text-[#2c3e5a] placeholder:text-[#b8b0a8] focus:outline-none focus:border-[#a7c7e7] transition-colors"
-              />
-              <button className="bg-[#2c3e5a] text-[#faf8f5] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#3d5270] transition-colors flex-shrink-0">
-                Subscribe
-              </button>
-            </div>
+            {subscribed ? (
+              <div className="flex items-center gap-2 bg-[#eaf6ea] rounded-2xl px-5 py-2.5 text-sm font-bold text-[#3a6b3a]">
+                <CheckCircle2 className="w-4 h-4" />
+                Subscribed successfully!
+              </div>
+            ) : (
+              <form onSubmit={handleSubscribe} className="flex gap-2 w-full sm:w-auto">
+                <input
+                  type="email"
+                  value={subEmail}
+                  onChange={(e) => setSubEmail(e.target.value)}
+                  placeholder="Your email"
+                  required
+                  className="flex-1 sm:w-56 px-4 py-2.5 rounded-2xl bg-[#f5f0e8] border border-[#e8e2da] text-sm text-[#2c3e5a] placeholder:text-[#b8b0a8] focus:outline-none focus:border-[#a7c7e7] transition-colors"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#2c3e5a] text-[#faf8f5] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#3d5270] transition-colors flex-shrink-0"
+                >
+                  Subscribe
+                </button>
+              </form>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#7a6e65]">
-            <span>&copy; 2025 ICSB Academy. All rights reserved.</span>
+            <span>&copy; 2026 SkillBridge. All rights reserved.</span>
             <span>Built with care for workers and communities everywhere.</span>
           </div>
         </div>
