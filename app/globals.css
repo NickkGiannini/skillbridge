@@ -1,0 +1,170 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: 'DM Serif Display', 'Georgia', serif;
+  --font-sans: var(--font-geist-sans), 'Geist Fallback', sans-serif;
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback', monospace;
+
+  /* ICSB Academy Pastel Color Palette */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Custom ICSB tokens */
+  --color-pastel-blue: var(--pastel-blue);
+  --color-pastel-green: var(--pastel-green);
+  --color-pastel-pink: var(--pastel-pink);
+  --color-pastel-peach: var(--pastel-peach);
+  --color-pastel-lavender: var(--pastel-lavender);
+  --color-warm-white: var(--warm-white);
+  --color-warm-cream: var(--warm-cream);
+  --color-deep-navy: var(--deep-navy);
+  --color-soft-brown: var(--soft-brown);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 3);
+}
+
+:root {
+  color-scheme: light;
+
+  /* ICSB Pastel Brand Colors */
+  --pastel-blue: #a7c7e7;
+  --pastel-green: #c1e1c1;
+  --pastel-pink: #ffb7b2;
+  --pastel-peach: #ffd5c8;
+  --pastel-lavender: #d4c5e2;
+  --warm-white: #faf8f5;
+  --warm-cream: #f5f0e8;
+  --deep-navy: #2c3e5a;
+  --soft-brown: #6b5b4e;
+
+  /* Semantic Tokens */
+  --background: #faf8f5;
+  --foreground: #2c3e5a;
+  --card: #ffffff;
+  --card-foreground: #2c3e5a;
+  --popover: #ffffff;
+  --popover-foreground: #2c3e5a;
+  --primary: #a7c7e7;
+  --primary-foreground: #2c3e5a;
+  --secondary: #c1e1c1;
+  --secondary-foreground: #2c3e5a;
+  --muted: #f5f0e8;
+  --muted-foreground: #7a6e65;
+  --accent: #ffb7b2;
+  --accent-foreground: #2c3e5a;
+  --destructive: #e07070;
+  --border: #e8e2da;
+  --input: #ede8e0;
+  --ring: #a7c7e7;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-heading);
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out forwards;
+}
+
+.animation-delay-100 { animation-delay: 0.1s; }
+.animation-delay-200 { animation-delay: 0.2s; }
+.animation-delay-300 { animation-delay: 0.3s; }
+.animation-delay-400 { animation-delay: 0.4s; }
+.animation-delay-500 { animation-delay: 0.5s; }
