@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Navbar from '@/components/navbar'
+import DemoNav from '@/components/demo-nav'
 import HeroSection from '@/components/hero-section'
 import HowItWorks from '@/components/how-it-works'
 import AuthModal from '@/components/auth-modal'
@@ -33,15 +34,26 @@ export default function Home() {
   }
 
   if (view === 'worker-dashboard') {
-    return <WorkerDashboard onLogout={handleLogout} />
+    return (
+      <>
+        <DemoNav view={view} onChange={setView} />
+        <WorkerDashboard onLogout={handleLogout} />
+      </>
+    )
   }
   if (view === 'company-dashboard') {
-    return <CompanyDashboard onLogout={handleLogout} />
+    return (
+      <>
+        <DemoNav view={view} onChange={setView} />
+        <CompanyDashboard onLogout={handleLogout} />
+      </>
+    )
   }
 
   return (
     <>
-      <Navbar onLoginClick={() => openModal()} />
+      <DemoNav view={view} onChange={setView} />
+      <Navbar onLoginClick={() => openModal()} offsetTop />
 
       <main>
         {/* Hero */}

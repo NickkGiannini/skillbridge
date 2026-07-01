@@ -1,47 +1,187 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import {
   Upload,
   Users,
   BadgeCheck,
   BookOpen,
-  ChevronRight,
   LogOut,
   Bell,
   GraduationCap,
   Building2,
-  Plus,
+  Sparkles,
   TrendingUp,
-  Clock,
   CheckCircle2,
   Star,
+  X,
+  FileText,
+  Wand2,
+  Loader2,
 } from 'lucide-react'
 
 interface CompanyDashboardProps {
   onLogout: () => void
 }
 
+interface QuizQuestion {
+  q: string
+  options: string[]
+  answer: number
+}
+
+interface Academy {
+  id: number
+  title: string
+  modules: string[]
+  quiz: QuizQuestion[]
+  enrolled: number
+  status: 'Live' | 'Draft'
+  isNew?: boolean
+}
+
+const initialAcademies: Academy[] = [
+  {
+    id: 1,
+    title: 'Warehouse Operations & SAP',
+    modules: ['Forklift Safety Fundamentals', 'Inventory Control in SAP', 'Warehouse Workflow Standards'],
+    quiz: [
+      {
+        q: 'What is the first check before operating a forklift?',
+        options: ['Pre-operation inspection', 'Charging the phone', 'Skipping the seatbelt'],
+        answer: 0,
+      },
+      {
+        q: 'Which SAP module tracks stock levels?',
+        options: ['SAP HR', 'SAP MM (Materials Management)', 'SAP Travel'],
+        answer: 1,
+      },
+      {
+        q: 'Inventory cycle counting helps to:',
+        options: ['Increase errors', 'Verify stock accuracy', 'Delay shipments'],
+        answer: 1,
+      },
+    ],
+    enrolled: 24,
+    status: 'Live',
+  },
+  {
+    id: 2,
+    title: 'Customer Service Excellence',
+    modules: ['Active Listening', 'Handling Complaints', 'CRM Basics'],
+    quiz: [
+      {
+        q: 'The best way to handle an upset customer is to:',
+        options: ['Interrupt them', 'Listen and empathize', 'Transfer the call immediately'],
+        answer: 1,
+      },
+      {
+        q: 'A CRM system is used to:',
+        options: ['Manage customer relationships', 'Cook food', 'Drive trucks'],
+        answer: 0,
+      },
+      {
+        q: 'Empathy in service means:',
+        options: ['Ignoring feelings', 'Understanding the customer', 'Ending the chat'],
+        answer: 1,
+      },
+    ],
+    enrolled: 16,
+    status: 'Live',
+  },
+]
+
 const candidates = [
-  { name: 'Maria Santos', course: 'Business Ops', score: 94, status: 'Ready to Hire', avatar: 'M', color: '#a7c7e7' },
-  { name: 'Juan Reyes', course: 'Customer Service', score: 88, status: 'Ready to Hire', avatar: 'J', color: '#c1e1c1' },
-  { name: 'Ana Cruz', course: 'Financial Records', score: 76, status: 'Still Learning', avatar: 'A', color: '#ffb7b2' },
-  { name: 'Lito Bautista', course: 'Business Ops', score: 61, status: 'In Progress', avatar: 'L', color: '#ffd5c8' },
+  { name: 'Maria Santos', course: 'Warehouse Operations', score: 94, status: 'Certified - Interview Unlocked', avatar: 'M', color: '#a7c7e7' },
+  { name: 'Juan Reyes', course: 'Customer Service', score: 88, status: 'Certified - Interview Unlocked', avatar: 'J', color: '#c1e1c1' },
+  { name: 'Ana Cruz', course: 'Warehouse Operations', score: 100, status: 'Hired', avatar: 'A', color: '#ffb7b2' },
+  { name: 'Lito Bautista', course: 'Customer Service', score: 0, status: 'Enrolled', avatar: 'L', color: '#ffd5c8' },
+  { name: 'Grace Lim', course: 'Warehouse Operations', score: 62, status: 'Enrolled', avatar: 'G', color: '#a7c7e7' },
 ]
 
-const statCards = [
-  { label: 'Active Courses', value: '3', icon: BookOpen, color: '#a7c7e7', bg: '#e8f3fb' },
-  { label: 'Enrolled Workers', value: '48', icon: Users, color: '#c1e1c1', bg: '#eaf6ea' },
-  { label: 'Ready to Hire', value: '12', icon: BadgeCheck, color: '#ffb7b2', bg: '#fff0ef' },
-  { label: 'Hired This Month', value: '5', icon: TrendingUp, color: '#ffd5c8', bg: '#fff5f0' },
+const generationSteps = [
+  'Parsing your document...',
+  'AI is structuring modules...',
+  'Generating interactive quizzes...',
+  'Creating skill vectors...',
 ]
 
-const courses = [
-  { title: 'Business Process Documentation', enrolled: 24, completed: 12, status: 'Live' },
-  { title: 'Customer Service Excellence', enrolled: 16, completed: 10, status: 'Live' },
-  { title: 'Financial Records Management', enrolled: 8, completed: 2, status: 'Draft' },
+const moduleTemplates = [
+  'Core Concepts & Terminology',
+  'Safety & Compliance Standards',
+  'Hands-On Practical Skills',
+  'Tools & Systems Training',
+  'Quality Assurance',
 ]
+
+function titleFromText(text: string): string {
+  const clean = text.trim().replace(/\s+/g, ' ')
+  if (!clean) return 'New Custom Academy'
+  const words = clean.split(' ').slice(0, 4).join(' ')
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
 
 export default function CompanyDashboard({ onLogout }: CompanyDashboardProps) {
+  const [academies, setAcademies] = useState<Academy[]>(initialAcademies)
+  const [jobText, setJobText] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [stepIndex, setStepIndex] = useState(0)
+  const [progress, setProgress] = useState(0)
+  const [selected, setSelected] = useState<Academy | null>(null)
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  useEffect(() => {
+    return () => timers.current.forEach(clearTimeout)
+  }, [])
+
+  const handleGenerate = () => {
+    if (!jobText.trim() || generating) return
+    setGenerating(true)
+    setStepIndex(0)
+    setProgress(0)
+
+    generationSteps.forEach((_, i) => {
+      const t = setTimeout(() => {
+        setStepIndex(i)
+        setProgress(((i + 1) / generationSteps.length) * 100)
+      }, i * 750)
+      timers.current.push(t)
+    })
+
+    const done = setTimeout(() => {
+      const newAcademy: Academy = {
+        id: Date.now(),
+        title: `${titleFromText(jobText)} Academy`,
+        modules: moduleTemplates.slice(0, 3),
+        quiz: [
+          {
+            q: 'What is the primary goal of this role?',
+            options: ['Deliver quality work', 'Avoid tasks', 'Ignore standards'],
+            answer: 0,
+          },
+          {
+            q: 'Following safety standards helps to:',
+            options: ['Increase risk', 'Protect workers', 'Slow production'],
+            answer: 1,
+          },
+          {
+            q: 'Continuous learning on the job leads to:',
+            options: ['Career growth', 'Fewer skills', 'Job loss'],
+            answer: 0,
+          },
+        ],
+        enrolled: 0,
+        status: 'Live',
+        isNew: true,
+      }
+      setAcademies((prev) => [newAcademy, ...prev])
+      setGenerating(false)
+      setJobText('')
+      setProgress(0)
+    }, generationSteps.length * 750 + 400)
+    timers.current.push(done)
+  }
+
   return (
     <div className="min-h-screen" style={{ background: '#faf8f5' }}>
       <div className="flex min-h-screen">
@@ -55,9 +195,9 @@ export default function CompanyDashboard({ onLogout }: CompanyDashboardProps) {
           </div>
 
           {[
-            { label: 'Academy Courses', icon: BookOpen, active: true },
-            { label: 'Talent Pool', icon: Users, active: false },
-            { label: 'Upload Manuals', icon: Upload, active: false },
+            { label: 'AI Academy Generator', icon: Wand2, active: true },
+            { label: 'Active Academies', icon: BookOpen, active: false },
+            { label: 'Candidate Pipeline', icon: Users, active: false },
             { label: 'Analytics', icon: TrendingUp, active: false },
           ].map((item) => (
             <button
@@ -73,20 +213,12 @@ export default function CompanyDashboard({ onLogout }: CompanyDashboardProps) {
             </button>
           ))}
 
-          {/* Upload CTA */}
-          <div className="mt-4">
-            <button className="w-full flex items-center justify-center gap-2 bg-[#ffb7b2] text-[#2c3e5a] px-4 py-3 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors">
-              <Plus className="w-4 h-4" />
-              Upload Manual
-            </button>
-          </div>
-
           <div className="mt-auto">
             <div className="bg-[#ffb7b2]/10 rounded-2xl p-4 mb-4">
               <div className="text-xs text-[#ffb7b2] font-semibold mb-1">Hire Rate</div>
-              <div className="text-2xl font-bold text-[#faf8f5] mb-1">25%</div>
+              <div className="text-2xl font-bold text-[#faf8f5] mb-1">40%</div>
               <div className="w-full bg-[#faf8f5]/10 rounded-full h-1.5">
-                <div className="bg-[#ffb7b2] h-1.5 rounded-full" style={{ width: '25%' }} />
+                <div className="bg-[#ffb7b2] h-1.5 rounded-full" style={{ width: '40%' }} />
               </div>
               <div className="text-[10px] text-[#faf8f5]/50 mt-1">this month</div>
             </div>
@@ -103,12 +235,12 @@ export default function CompanyDashboard({ onLogout }: CompanyDashboardProps) {
         {/* Main content */}
         <main className="flex-1 p-6 md:p-10 overflow-auto">
           {/* Top bar */}
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-sm text-[#7a6e65] font-medium">Company Dashboard</p>
               <h1 className="text-2xl font-bold text-[#2c3e5a] flex items-center gap-2">
                 <Building2 className="w-6 h-6 text-[#ffb7b2]" />
-                Bright Solutions Inc.
+                LogiCorp Solutions
               </h1>
             </div>
             <div className="flex items-center gap-3">
@@ -117,22 +249,21 @@ export default function CompanyDashboard({ onLogout }: CompanyDashboardProps) {
                 <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#ffb7b2]" />
               </button>
               <div className="w-10 h-10 rounded-2xl bg-[#ffb7b2] flex items-center justify-center">
-                <span className="text-sm font-bold text-[#2c3e5a]">B</span>
+                <span className="text-sm font-bold text-[#2c3e5a]">L</span>
               </div>
             </div>
           </div>
 
           {/* Stat cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            {statCards.map((stat, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-3xl p-5 border border-[#e8e2da] shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3"
-                  style={{ background: stat.bg }}
-                >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: 'Active Academies', value: String(academies.length), icon: BookOpen, color: '#a7c7e7', bg: '#e8f3fb' },
+              { label: 'Candidates Screened', value: String(candidates.length), icon: Users, color: '#c1e1c1', bg: '#eaf6ea' },
+              { label: 'Interview Unlocked', value: String(candidates.filter((c) => c.status.includes('Interview')).length), icon: BadgeCheck, color: '#ffb7b2', bg: '#fff0ef' },
+              { label: 'Hired', value: String(candidates.filter((c) => c.status === 'Hired').length), icon: TrendingUp, color: '#ffd5c8', bg: '#fff5f0' },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white rounded-3xl p-5 border border-[#e8e2da] shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center mb-3" style={{ background: stat.bg }}>
                   <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
                 </div>
                 <div className="text-2xl font-bold text-[#2c3e5a] mb-0.5">{stat.value}</div>
@@ -141,138 +272,213 @@ export default function CompanyDashboard({ onLogout }: CompanyDashboardProps) {
             ))}
           </div>
 
-          {/* Two column layout */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-10">
-            {/* Courses col */}
-            <div className="xl:col-span-3">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-[#2c3e5a]">Your Academy Courses</h2>
-                <button className="flex items-center gap-1.5 text-xs font-bold bg-[#ffb7b2] text-[#2c3e5a] px-3 py-1.5 rounded-xl hover:bg-[#ffa09a] transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> New Course
+          {/* AI Academy Generator */}
+          <div className="bg-white rounded-3xl border border-[#e8e2da] shadow-sm p-6 md:p-8 mb-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-2xl bg-[#a7c7e7]/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-[#4a7ab5]" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-[#2c3e5a]">AI Academy Generator</h2>
+                <p className="text-sm text-[#7a6e65]">Paste a job description or manual — AI builds the course.</p>
+              </div>
+            </div>
+
+            <textarea
+              value={jobText}
+              onChange={(e) => setJobText(e.target.value)}
+              disabled={generating}
+              rows={4}
+              placeholder="e.g. We need a warehouse worker who knows SAP, forklift safety, and basic inventory control..."
+              className="w-full rounded-2xl bg-[#faf8f5] border border-[#e8e2da] p-4 text-sm text-[#2c3e5a] placeholder:text-[#b8b0a8] focus:outline-none focus:border-[#a7c7e7] focus:ring-2 focus:ring-[#a7c7e7]/20 transition-all resize-none disabled:opacity-60"
+            />
+
+            {generating ? (
+              <div className="mt-5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[#4a7ab5] mb-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {generationSteps[stepIndex]}
+                </div>
+                <div className="w-full bg-[#f5f0e8] rounded-full h-2.5 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-[#a7c7e7] transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between mt-5 gap-4 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-[#7a6e65]">
+                  <FileText className="w-3.5 h-3.5 text-[#a7c7e7]" />
+                  Supports SOPs, manuals, and job descriptions
+                </div>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!jobText.trim()}
+                  className="inline-flex items-center gap-2 bg-[#a7c7e7] text-[#2c3e5a] px-6 py-3 rounded-2xl text-sm font-bold hover:bg-[#89b8e0] transition-all hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Generate Academy with AI
                 </button>
               </div>
+            )}
+          </div>
+
+          {/* Two column layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            {/* Active Academies */}
+            <div className="xl:col-span-3">
+              <h2 className="text-lg font-bold text-[#2c3e5a] mb-5">Active Academies</h2>
               <div className="space-y-3">
-                {courses.map((course, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-3xl p-5 border border-[#e8e2da] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                {academies.map((academy) => (
+                  <button
+                    key={academy.id}
+                    onClick={() => setSelected(academy)}
+                    className={`w-full text-left bg-white rounded-3xl p-5 border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all ${
+                      academy.isNew ? 'border-[#a7c7e7] ring-2 ring-[#a7c7e7]/20 fade-in-up' : 'border-[#e8e2da]'
+                    }`}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bold text-[#2c3e5a] text-sm">{course.title}</h3>
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-wide rounded-full px-2.5 py-1"
-                        style={{
-                          background: course.status === 'Live' ? '#eaf6ea' : '#f5f0e8',
-                          color: course.status === 'Live' ? '#3a6b3a' : '#6b5b4e',
-                        }}
-                      >
-                        {course.status}
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-[#2c3e5a] text-sm">{academy.title}</h3>
+                        {academy.isNew && (
+                          <span className="text-[9px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 bg-[#a7c7e7] text-[#2c3e5a]">
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wide rounded-full px-2.5 py-1 bg-[#eaf6ea] text-[#3a6b3a]">
+                        {academy.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-6 text-xs text-[#7a6e65]">
+                    <div className="flex items-center gap-5 text-xs text-[#7a6e65]">
                       <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-[#a7c7e7]" />
-                        <span>{course.enrolled} enrolled</span>
+                        <BookOpen className="w-3.5 h-3.5 text-[#a7c7e7]" />
+                        {academy.modules.length} modules
                       </div>
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-[#c1e1c1]" />
-                        <span>{course.completed} completed</span>
+                        {academy.quiz.length} quiz questions
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-[#ffb7b2]" />
-                        <span>{course.enrolled - course.completed} learning</span>
+                        <Users className="w-3.5 h-3.5 text-[#ffb7b2]" />
+                        {academy.enrolled} enrolled
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <div className="w-full bg-[#f5f0e8] rounded-full h-1.5">
-                        <div
-                          className="h-1.5 rounded-full bg-[#a7c7e7]"
-                          style={{
-                            width: `${(course.completed / course.enrolled) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Talent Pool col */}
+            {/* Candidate Pipeline */}
             <div className="xl:col-span-2">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-[#2c3e5a]">Talent Pool</h2>
-                <button className="text-xs font-semibold text-[#ffb7b2] hover:underline flex items-center gap-1">
-                  View all <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <div className="space-y-3">
+              <h2 className="text-lg font-bold text-[#2c3e5a] mb-5">Candidate Pipeline</h2>
+              <div className="bg-white rounded-3xl border border-[#e8e2da] shadow-sm overflow-hidden">
                 {candidates.map((c, i) => (
                   <div
                     key={i}
-                    className="bg-white rounded-3xl p-4 border border-[#e8e2da] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                    className={`flex items-center gap-3 p-4 ${i !== candidates.length - 1 ? 'border-b border-[#f0ebe3]' : ''}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm text-[#2c3e5a] flex-shrink-0"
-                        style={{ background: c.color }}
+                    <div
+                      className="w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-xs text-[#2c3e5a] flex-shrink-0"
+                      style={{ background: c.color }}
+                    >
+                      {c.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-[#2c3e5a] text-sm truncate">{c.name}</div>
+                      <div className="text-[11px] text-[#7a6e65] truncate">{c.course}</div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="font-bold text-[#2c3e5a] text-sm flex items-center gap-1 justify-end">
+                        {c.score > 0 && <Star className="w-3 h-3 fill-[#ffb7b2] text-[#ffb7b2]" />}
+                        {c.score > 0 ? `${c.score}%` : '—'}
+                      </div>
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 inline-block mt-0.5"
+                        style={{
+                          background:
+                            c.status === 'Hired' ? '#eaf6ea' : c.status.includes('Interview') ? '#fff0ef' : '#f5f0e8',
+                          color:
+                            c.status === 'Hired' ? '#3a6b3a' : c.status.includes('Interview') ? '#c0574f' : '#6b5b4e',
+                        }}
                       >
-                        {c.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-[#2c3e5a] text-sm">{c.name}</div>
-                        <div className="text-xs text-[#7a6e65]">{c.course}</div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="font-bold text-[#2c3e5a] text-sm flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-[#ffb7b2] text-[#ffb7b2]" />
-                          {c.score}%
-                        </div>
-                        <span
-                          className="text-[10px] font-semibold"
-                          style={{
-                            color:
-                              c.status === 'Ready to Hire'
-                                ? '#3a6b3a'
-                                : c.status === 'Still Learning'
-                                ? '#a77b00'
-                                : '#6b5b4e',
-                          }}
-                        >
-                          {c.status}
-                        </span>
-                      </div>
+                        {c.status === 'Certified - Interview Unlocked' ? 'Interview' : c.status}
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-
-          {/* Upload CTA Banner */}
-          <div
-            className="rounded-3xl p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5"
-            style={{ background: '#fff0ef' }}
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#ffb7b2] flex items-center justify-center flex-shrink-0">
-                <Upload className="w-6 h-6 text-[#2c3e5a]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-[#2c3e5a] mb-0.5">
-                  Upload a New Training Manual
-                </h3>
-                <p className="text-sm text-[#7a6e65]">
-                  Our AI will generate a custom course in under 2 minutes.
-                </p>
-              </div>
-            </div>
-            <button className="bg-[#ffb7b2] text-[#2c3e5a] px-6 py-3 rounded-2xl text-sm font-bold hover:bg-[#ffa09a] transition-colors shadow-md flex-shrink-0 hover:-translate-y-0.5 hover:shadow-lg duration-200">
-              Upload Manual
-            </button>
-          </div>
         </main>
       </div>
+
+      {/* Academy Detail Modal */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#2c3e5a]/40 backdrop-blur-sm fade-in"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="bg-[#faf8f5] rounded-3xl w-full max-w-lg max-h-[85vh] overflow-auto shadow-2xl fade-in-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-[#faf8f5] flex items-start justify-between p-6 border-b border-[#e8e2da]">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#4a7ab5]">AI-Generated Course</span>
+                <h3 className="text-xl font-bold text-[#2c3e5a] mt-1">{selected.title}</h3>
+              </div>
+              <button
+                onClick={() => setSelected(null)}
+                className="w-9 h-9 rounded-2xl bg-white border border-[#e8e2da] flex items-center justify-center text-[#6b5b4e] hover:bg-[#f5f0e8] transition-colors flex-shrink-0"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <h4 className="text-sm font-bold text-[#2c3e5a] mb-3 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#a7c7e7]" /> Course Structure
+              </h4>
+              <div className="space-y-2 mb-6">
+                {selected.modules.map((m, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-[#e8e2da]">
+                    <div className="w-7 h-7 rounded-xl bg-[#a7c7e7]/20 flex items-center justify-center text-xs font-bold text-[#4a7ab5] flex-shrink-0">
+                      {i + 1}
+                    </div>
+                    <span className="text-sm font-medium text-[#2c3e5a]">Module {i + 1}: {m}</span>
+                  </div>
+                ))}
+              </div>
+
+              <h4 className="text-sm font-bold text-[#2c3e5a] mb-3 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#c1e1c1]" /> Sample Quiz Questions
+              </h4>
+              <div className="space-y-3">
+                {selected.quiz.map((question, i) => (
+                  <div key={i} className="bg-white rounded-2xl p-4 border border-[#e8e2da]">
+                    <p className="text-sm font-semibold text-[#2c3e5a] mb-2.5">{i + 1}. {question.q}</p>
+                    <div className="space-y-1.5">
+                      {question.options.map((opt, j) => (
+                        <div
+                          key={j}
+                          className={`text-xs rounded-xl px-3 py-2 border ${
+                            j === question.answer
+                              ? 'bg-[#eaf6ea] border-[#c1e1c1] text-[#3a6b3a] font-semibold'
+                              : 'bg-[#faf8f5] border-[#e8e2da] text-[#7a6e65]'
+                          }`}
+                        >
+                          {opt}
+                          {j === question.answer && <span className="ml-1.5">✓</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
