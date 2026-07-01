@@ -16,6 +16,12 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 
+const LogoFallback = () => (
+  <div className="w-8 h-8 rounded-2xl bg-[#a7c7e7] flex items-center justify-center" aria-hidden="true">
+    <GraduationCap className="w-4 h-4 text-[#2c3e5a]" />
+  </div>
+)
+
 type Role = 'worker' | 'company'
 type AuthMode = 'login' | 'register'
 
@@ -97,13 +103,25 @@ export default function AuthModal({
         {/* Header */}
         <div className="px-8 pt-7 pb-0 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-2xl flex items-center justify-center"
-              style={{ background: activeColor + '30' }}
-            >
-              <GraduationCap className="w-4 h-4" style={{ color: '#2c3e5a' }} />
+            <img
+              src="/logo-skillbridge.jpeg"
+              alt="SkillBridge"
+              height={32}
+              width={32}
+              className="rounded-xl object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
+                if (fallback) fallback.style.display = 'flex'
+              }}
+            />
+            <span className="hidden" aria-hidden="true">
+              <LogoFallback />
+            </span>
+            <div className="flex flex-col leading-none">
+              <span className="font-bold text-[#2c3e5a] text-sm">Skill<span className="text-[#1a7fc1]">Bridge</span></span>
+              <span className="text-[9px] text-[#a7c7e7] font-semibold uppercase tracking-widest">ICSB Cup 2026</span>
             </div>
-            <span className="font-bold text-[#2c3e5a] text-base">ICSB Academy</span>
           </div>
           <button
             onClick={onClose}
