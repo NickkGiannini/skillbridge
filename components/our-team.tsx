@@ -114,8 +114,7 @@ export default function OurTeam() {
 
               {/* Info */}
               <div className="p-5">
-                <h3 className="font-bold text-[#2c3e5a] text-base mb-0.5">{member.name}</h3>
-                <p className="text-xs text-[#7a6e65] leading-relaxed mb-4">{member.role}</p>
+                <h3 className="font-bold text-[#2c3e5a] text-base mb-4">{member.name}</h3>
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#6b5b4e] bg-[#f5f0e8] rounded-full px-2.5 py-1">
                     {member.flag} {member.country}

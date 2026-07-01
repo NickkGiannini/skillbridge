@@ -34,16 +34,6 @@ export default function HeroSection({ onWorkerClick, onCompanyClick }: HeroSecti
       />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center">
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-[#ffffff] border border-[#e8e2da] rounded-full px-4 py-2 mb-8 shadow-sm animate-fade-up opacity-0 animation-delay-100">
-          <Sparkles className="w-3.5 h-3.5 text-[#a7c7e7]" />
-          <span className="text-xs font-medium text-[#6b5b4e] tracking-wide uppercase">
-            AI-Powered Corporate Academy
-          </span>
-          <div className="w-1.5 h-1.5 rounded-full bg-[#c1e1c1]" />
-          <span className="text-xs text-[#6b5b4e]">Decentralized &amp; Free</span>
-        </div>
-
         {/* Main Headline */}
         <h1
           className="text-5xl md:text-7xl font-bold text-[#2c3e5a] leading-tight tracking-tight mb-6 animate-fade-up opacity-0 animation-delay-200 text-balance"

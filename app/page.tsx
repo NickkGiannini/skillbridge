@@ -10,7 +10,7 @@ import WorkerDashboard from '@/components/worker-dashboard'
 import CompanyDashboard from '@/components/company-dashboard'
 import VisionRoadmap from '@/components/vision-roadmap'
 import OurTeam from '@/components/our-team'
-import { Heart, Shield, Zap, Globe, ArrowRight, GraduationCap, Mail, CheckCircle2 } from 'lucide-react'
+import { Heart, Shield, Zap, Globe, ArrowRight, GraduationCap } from 'lucide-react'
 
 type Role = 'worker' | 'company'
 type View = 'landing' | 'worker-dashboard' | 'company-dashboard'
@@ -19,8 +19,6 @@ export default function Home() {
   const [view, setView] = useState<View>('landing')
   const [modalOpen, setModalOpen] = useState(false)
   const [modalRole, setModalRole] = useState<Role | undefined>(undefined)
-  const [subscribed, setSubscribed] = useState(false)
-  const [subEmail, setSubEmail] = useState('')
 
   const openModal = (role?: Role) => {
     setModalRole(role)
@@ -35,13 +33,6 @@ export default function Home() {
   const handleLogout = () => {
     setView('landing')
     setModalRole(undefined)
-  }
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (subEmail.trim()) {
-      setSubscribed(true)
-    }
   }
 
   const scrollTo = (id: string) => {
@@ -335,40 +326,6 @@ export default function Home() {
                 <span className="block text-[#b8b0a8] mb-2 text-xs cursor-default">Terms of Use</span>
               </div>
             </div>
-          </div>
-
-          {/* Newsletter */}
-          <div className="bg-white rounded-3xl p-6 border border-[#e8e2da] flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
-            <div className="flex items-center gap-3 flex-1">
-              <Mail className="w-5 h-5 text-[#a7c7e7] flex-shrink-0" />
-              <div>
-                <div className="font-bold text-[#2c3e5a] text-sm">Stay in the loop</div>
-                <div className="text-xs text-[#7a6e65]">Get updates on new courses and hiring opportunities.</div>
-              </div>
-            </div>
-            {subscribed ? (
-              <div className="flex items-center gap-2 bg-[#eaf6ea] rounded-2xl px-5 py-2.5 text-sm font-bold text-[#3a6b3a]">
-                <CheckCircle2 className="w-4 h-4" />
-                Subscribed successfully!
-              </div>
-            ) : (
-              <form onSubmit={handleSubscribe} className="flex gap-2 w-full sm:w-auto">
-                <input
-                  type="email"
-                  value={subEmail}
-                  onChange={(e) => setSubEmail(e.target.value)}
-                  placeholder="Your email"
-                  required
-                  className="flex-1 sm:w-56 px-4 py-2.5 rounded-2xl bg-[#f5f0e8] border border-[#e8e2da] text-sm text-[#2c3e5a] placeholder:text-[#b8b0a8] focus:outline-none focus:border-[#a7c7e7] transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="bg-[#2c3e5a] text-[#faf8f5] px-5 py-2.5 rounded-2xl text-sm font-bold hover:bg-[#3d5270] transition-colors flex-shrink-0"
-                >
-                  Subscribe
-                </button>
-              </form>
-            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#7a6e65]">
