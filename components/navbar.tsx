@@ -5,9 +5,10 @@ import { GraduationCap, Menu, X } from 'lucide-react'
 
 interface NavbarProps {
   onLoginClick: () => void
+  offsetTop?: boolean
 }
 
-export default function Navbar({ onLoginClick }: NavbarProps) {
+export default function Navbar({ onLoginClick, offsetTop = false }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -19,7 +20,8 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      style={{ top: offsetTop ? 'var(--demo-nav-h, 52px)' : 0 }}
+      className={`fixed left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
           ? 'bg-[#faf8f5]/95 backdrop-blur-md shadow-sm border-b border-[#e8e2da]'
           : 'bg-transparent'
