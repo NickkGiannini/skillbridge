@@ -1,6 +1,6 @@
 'use client'
 
-import { Linkedin } from 'lucide-react'
+import { Link } from 'lucide-react'
 
 const team = [
   {
@@ -124,7 +124,7 @@ export default function OurTeam() {
                     className="w-7 h-7 rounded-xl bg-[#e8f3fb] flex items-center justify-center text-[#4a7ab5] hover:bg-[#a7c7e7] hover:text-[#2c3e5a] transition-colors"
                     aria-label={`LinkedIn profile of ${member.name}`}
                   >
-                    <Linkedin className="w-3.5 h-3.5" />
+                    <Link className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
